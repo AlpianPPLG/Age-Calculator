@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { AgeCalculator } from "./components/AgeCalculator";
 import { AgeResult } from "./components/AgeResult";
 import { AgeChart } from "./components/AgeChart";
+import { LeaveMessage } from "./components/LeaveMessage"; // Import LeaveMessage component
 import {
   differenceInDays,
   differenceInHours,
@@ -21,14 +22,50 @@ function App() {
   const [daysInYear, setDaysInYear] = useState({ daysPassed: 0, daysLeft: 0 });
   const [darkMode, setDarkMode] = useState(false);
   const [timeUnit, setTimeUnit] = useState("years");
-  const [decade, setDecade] = useState(null); // State untuk menyimpan dekade dan sisa waktu menuju dekade
+  const [decade, setDecade] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [history, setHistory] = useState([]); // State untuk riwayat perhitungan
+  const [motivation, setMotivation] = useState(""); // State untuk motivasi
+  const [fact, setFact] = useState(""); // State untuk cerita atau fakta menarik
+
+  const motivationalQuotes = [
+    "Age is merely the number of years the world has been enjoying you.",
+    "The more you praise and celebrate your life, the more there is in life to celebrate.",
+    "You are never too old to set another goal or to dream a new dream.",
+    "Keep your face always toward the sunshine—and shadows will fall behind you.",
+    "The secret of staying young is to live honestly, eat slowly, and lie about your age.",
+  ];
+
+  const interestingFacts = [
+    "Did you know? The tradition of celebrating birthdays dates back to ancient Egypt, where the Pharaoh's birthday was considered a significant event.",
+    "In many cultures, a person's 18th birthday is considered a rite of passage into adulthood.",
+    "The longest recorded human lifespan is 122 years, achieved by Jeanne Calment of France.",
+    "In ancient Rome, birthday celebrations were reserved for men, while women's birthdays were not celebrated until the 12th century.",
+    "In some cultures, it's customary to celebrate 'half-birthdays' for children who are born on dates that fall close to holidays.",
+  ];
+
+  useEffect(() => {
+    const storedMessages = JSON.parse(localStorage.getItem("messages")) || [];
+    setMessages(storedMessages);
+
+    const storedHistory = JSON.parse(localStorage.getItem("history")) || [];
+    setHistory(storedHistory);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("messages", JSON.stringify(messages));
+  }, [messages]);
+
+  useEffect(() => {
+    localStorage.setItem("history", JSON.stringify(history));
+  }, [history]);
 
   const calculateAge = (date) => {
     const today = new Date();
     const dateObject = new Date(date);
 
     const years = differenceInYears(today, dateObject);
-    setAge({
+    const ageDetails = {
       years: years,
       months: differenceInMonths(today, dateObject),
       days: differenceInDays(today, dateObject),
@@ -36,7 +73,13 @@ function App() {
       hours: differenceInHours(today, dateObject),
       minutes: differenceInMinutes(today, dateObject),
       seconds: differenceInSeconds(today, dateObject),
-    });
+    };
+
+    setAge(ageDetails);
+    setHistory([
+      ...history,
+      { date: dateObject.toDateString(), age: ageDetails },
+    ]); // Tambahkan riwayat perhitungan
 
     const nextBirthdayDate = new Date(
       today.getFullYear(),
@@ -54,14 +97,21 @@ function App() {
 
     setDaysInYear(calculateDaysInYear());
 
-    // Menambahkan logika untuk perhitungan dekade
-    const currentDecade = Math.floor(years / 10) * 10; // Dekade saat ini
-    const yearsInCurrentDecade = years - currentDecade; // Sisa tahun di dekade saat ini
-    const yearsToNextDecade = 10 - yearsInCurrentDecade; // Sisa tahun menuju dekade berikutnya
+    const currentDecade = Math.floor(years / 10) * 10;
+    const yearsInCurrentDecade = years - currentDecade;
+    const yearsToNextDecade = 10 - yearsInCurrentDecade;
     setDecade({
       currentDecade: currentDecade,
       yearsToNextDecade: yearsToNextDecade,
     });
+
+    // Ambil kutipan motivasi dan fakta menarik secara acak
+    const randomQuote =
+      motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
+    const randomFact =
+      interestingFacts[Math.floor(Math.random() * interestingFacts.length)];
+    setMotivation(randomQuote);
+    setFact(randomFact);
   };
 
   const toggleDarkMode = () => {
@@ -129,6 +179,10 @@ function App() {
 
   const handleUnitChange = (event) => {
     setTimeUnit(event.target.value);
+  };
+
+  const handleNewMessage = (message) => {
+    setMessages([...messages, message]);
   };
 
   return (
@@ -206,6 +260,48 @@ function App() {
             </p>
           </div>
           <AgeChart age={age} />
+        </div>
+      )}
+      {/* Fitur Leave a Message */}
+      <LeaveMessage onSubmit={handleNewMessage} />
+      <div className="my-4">
+        <h4>Messages</h4>
+        {messages.map((msg, index) => (
+          <div key={index} className="border p-2 mb-2 rounded">
+            <strong>{msg.name}</strong> {msg.email && `(${msg.email})`}:
+            <p>{msg.message}</p>
+          </div>
+        ))}
+      </div>
+      {/* Riwayat Perhitungan */}
+      <div className="my-4">
+        <h4>Riwayat Perhitungan Usia</h4>
+        {history.length === 0 ? (
+          <p>Tidak ada riwayat perhitungan.</p>
+        ) : (
+          history.map((entry, index) => (
+            <div key={index} className="border p-2 mb-2 rounded">
+              <strong>Tanggal: {entry.date}</strong>
+              <p>
+                Usia: {entry.age.years} tahun, {entry.age.months} bulan,{" "}
+                {entry.age.days} hari
+              </p>
+            </div>
+          ))
+        )}
+      </div>
+      {/* Motivasi */}
+      {motivation && (
+        <div className="alert alert-success text-center">
+          <h5>Motivasi Hari Ini:</h5>
+          <p>{motivation}</p>
+        </div>
+      )}
+      {/* Fakta Menarik */}
+      {fact && (
+        <div className="alert alert-info text-center">
+          <h5>Fakta Menarik:</h5>
+          <p>{fact}</p>
         </div>
       )}
       {/* Footer */}
